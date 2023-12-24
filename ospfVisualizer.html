@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>OSPF Visualizer v0.1</title>
+  <script src="https://d3js.org/d3.v4.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+  <style>
+    table {
+      color: red;
+      font-family: courier;
+    }
+
+    thead {
+      text-align: left;
+      font-size: 150%;
+      background-color: lightgrey;
+    }
+
+    th {
+      text-align: left;
+      font-size: 80%;
+    }
+
+    th.min {
+      width: 1%;
+      white-space: nowrap;
+    }
+
+    td {
+      width: auto;
+    }
+
+    tr.submit {
+      background-color: lightgrey;
+    }
+
+    .link {
+      stroke: #ccc;
+    }
+
+    .label {
+      fill: black;
+      text-anchor: middle;
+      pointer-events: none;
+      font: 10px sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+  <form id="uploadForm" action="/cgi-bin/ospfVisualizer.cgi" method="post" enctype="multipart/form-data">
+  <table width=100% border=0>
+    <thead>
+      <tr><th scope="col" colspan=2>OSPF Database Visualizer v0.1</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row" class="min">Output from "show ip ospf database router":</th>
+        <td><input type="file" name="indata" id="indata"></td>
+      </tr>
+      <tr>
+        <th scope="row" class="min">Hosts file (Optional):</th>
+        <td><input type="file" name="inhosts" id="inhosts"></td>
+      </tr>
+      <tr class="submit">
+        <th scope="row" class="min"></th>
+        <td><input type="submit" value="Submit"></td>
+      </tr>
+      <tr>
+        <td colspan=2><div id="ospfVisualizer"></div></td>
+      </tr>
+    </tbody>
+  </table>
+  </form>
+
+  <script>
+    var margin = {top: 10, right: 30, bottom: 30, left: 40},
+      width = $(window).width() - margin.left - margin.right,
+      height = $(window).height() * .75;
+
+    var svg = d3.select("#ospfVisualizer")
+      .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+
+    $(document).ready(function() {
+      $("#uploadForm").submit(function (event) {
+        event.preventDefault();
+
+        var formData = new FormData(this);
+
+        $.ajax({
+          type: "POST",
+          url: "/cgi-bin/ospfVisualizer.cgi",
+          data: formData,
+          processData: false,
+          contentType: false,
+          dataType: "json",
+          success: function (response) {
+            const asize = 50;
+
+            var link = svg
+              .selectAll("line")
+              .data(response.links)
+              .enter()
+              .append("line")
+                .attr("class", "link");
+
+            var node = svg
+              .selectAll("image")
+              .data(response.nodes)
+              .enter()
+              .append("image")
+                .attr("xlink:href", function(d){ return d.asset })
+                .attr("width", asize)
+                .attr("height", asize)
+                .attr("class", "node");
+
+            var label = svg
+              .selectAll("text")
+              .data(response.nodes)
+              .enter()
+              .append("text")
+                .attr("class", "label")
+                .text(function(d) { return d.name });
+
+            var simulation = d3.forceSimulation(response.nodes)
+              .force("link", d3.forceLink()
+                .id(function(d) { return d.id; })
+                .links(response.links)
+              )
+              .force("charge", d3.forceManyBody().strength(-200))
+              .force("center", d3.forceCenter(width / 2, height / 2))
+              .on("end", ticked);
+
+            function ticked() {
+              link
+                .attr("x1", function(d) { return d.source.x; })
+                .attr("y1", function(d) { return d.source.y; })
+                .attr("x2", function(d) { return d.target.x; })
+                .attr("y2", function(d) { return d.target.y; });
+
+              node
+                .attr("x", function(d) { return d.x-(asize / 2); })
+                .attr("y", function(d) { return d.y-(asize / 2); });
+
+              label
+                .attr("x", function(d) { return d.x; })
+                .attr("y", function(d) { return d.y; });
+            }
+          },
+          error: function (error) {
+            console.error("Error:", error);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>
