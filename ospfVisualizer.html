@@ -8,7 +8,7 @@
   <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
   <style>
     table {
-      color: red;
+      color: #8e0000; 
       font-family: courier;
     }
 
@@ -37,14 +37,18 @@
     }
 
     .link {
-      stroke: #ccc;
+      stroke: #8e0000;
     }
 
     .label {
-      fill: black;
+      fill: white;
       text-anchor: middle;
       pointer-events: none;
-      font: 10px sans-serif;
+      font-family: calibri, arial, sans-serif;
+      font-size: 14px;
+      font-weight: bold;
+      -webkit-text-fill-color: white;
+      -webkit-text-stroke: 3px black;
     }
   </style>
 </head>
@@ -52,33 +56,40 @@
 <body>
   <form id="uploadForm" action="/cgi-bin/ospfVisualizer.cgi" method="post" enctype="multipart/form-data">
   <table width=100% border=0>
-    <thead>
-      <tr><th scope="col" colspan=2>OSPF Database Visualizer v0.1</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <th scope="row" class="min">Output from "show ip ospf database router":</th>
-        <td><input type="file" name="indata" id="indata"></td>
-      </tr>
-      <tr>
-        <th scope="row" class="min">Hosts file (Optional):</th>
-        <td><input type="file" name="inhosts" id="inhosts"></td>
-      </tr>
-      <tr class="submit">
-        <th scope="row" class="min"></th>
-        <td><input type="submit" value="Submit"></td>
-      </tr>
-      <tr>
-        <td colspan=2><div id="ospfVisualizer"></div></td>
-      </tr>
-    </tbody>
+    <tr>
+      <td colspan=2>
+      <table width=100% border=0>
+        <thead>
+          <tr>
+            <th scope="col">OSPF Database Visualizer v0.1</th>
+            <td align=right><font size=2><i>&copy;2023 Lloyd Gieg</i></font></td>
+          </tr>
+        </thead>
+      </table>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row" class="min">Output from "show ip ospf database router":</th>
+      <td><input type="file" name="indata" id="indata"></td>
+    </tr>
+    <tr>
+      <th scope="row" class="min">Hosts file (Optional):</th>
+      <td><input type="file" name="inhosts" id="inhosts"></td>
+    </tr>
+    <tr class="submit">
+      <th scope="row" class="min"></th>
+      <td><input type="submit" value="Submit"></td>
+    </tr>
+    <tr>
+      <td colspan=2 bgcolor=darkgrey><div id="ospfVisualizer"></div></td>
+    </tr>
   </table>
   </form>
 
   <script>
     var margin = {top: 10, right: 30, bottom: 30, left: 40},
       width = $(window).width() - margin.left - margin.right,
-      height = $(window).height() * .75;
+      height = $(window).height() * .8;
 
     var svg = d3.select("#ospfVisualizer")
       .append("svg")
@@ -99,6 +110,7 @@
           contentType: false,
           dataType: "json",
           success: function (response) {
+            d3.selectAll("svg > *").remove();
             const asize = 50;
 
             var link = svg
@@ -131,8 +143,11 @@
                 .id(function(d) { return d.id; })
                 .links(response.links)
               )
-              .force("charge", d3.forceManyBody().strength(-200))
+              .force("charge", d3.forceManyBody().strength(-100))
               .force("center", d3.forceCenter(width / 2, height / 2))
+              .force("collision", d3.forceCollide().radius(function(d) {
+                return d.radius
+              }))
               .on("end", ticked);
 
             function ticked() {
@@ -148,7 +163,7 @@
 
               label
                 .attr("x", function(d) { return d.x; })
-                .attr("y", function(d) { return d.y; });
+                .attr("y", function(d) { return d.y+4; });
             }
           },
           error: function (error) {
