@@ -7,7 +7,6 @@ import cgi
 import tempfile
 import os
 
-debug = 0
 debugfile = '/tmp/ospfvisualizer.debug'
 
 
@@ -22,8 +21,7 @@ def buildhosts(infile):
     return outhosts
 
 
-def buildjson(infile, hostdata = {}):
-    global dout
+def buildjson(infile, hostdata):
     nodes = set()
     links = []
     jsonout = {
@@ -59,9 +57,6 @@ def buildjson(infile, hostdata = {}):
                     lan = transitre.match(indata[idx + 1]).group(1)
                     nodes.add(f"lan-{lan}")
                     links.append({curnode: f"lan-{lan}"})
-    if debug:
-        dout.write(f"nodes: {nodes}\n")
-        dout.write(f"links: {links}\n")
     for x in nodes:
         if nodenamelinkre.match(x):
             jsonout["nodes"].append({"id": x, "name": nodenamelinkre.match(x).group(1), "asset": "link.png"})
@@ -104,9 +99,4 @@ def main():
 
 
 if __name__ == '__main__':
-    if debug:
-        dout = open(debugfile, 'a')
     main()
-    if debug:
-        dout.close()
-
